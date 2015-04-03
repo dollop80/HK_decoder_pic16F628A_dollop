@@ -1,0 +1,39 @@
+With bind plug set at power on:
+
+The decoder pulls the dataline low for 200 msec, forcing the receiver into binding mode and reads the binding data that the TX sends during the binding procedure and stores them permanently into the EEPROM. The LED is switched ON.
+
+
+
+Without bind plug set at power on:
+
+The decoder sends binding data to the receiver and reads the channeldata, that the receiver has received.
+
+It verifies the checksum of the channel data. If the checksum is correct, it copies the data to its working registers.
+Every time when we are going to receive channel data, Timer1 is started/restarted with a timeout of about 25 msec. If we receive data, this timeout never should happen as the repetition rate of the channel data is about 20 msec. If the timeout occurrs, we have lost a package or the signal and the receive loop is exited.
+
+ If there are three consecutive missing or invalid channel data sets, the fail safe data will be copied into the working registers. 
+
+Channel pulses are created from the values stored in the working registers. As soon as there is at least one full valid channel data block, these data will be used again.
+
+Fail safe can be customized at any time. As long as PORTA.2 is pulled to ground (jumper, switch), the actually received channel data is permanently saved into the EEPROM.
+
+
+Channel 4 is copied to channel output 7. If PORTA.2 is high (no jumper to ground), the servo rotation at channel 7 will be reversed. With a jumper to ground on PORTA.2, the servo rotation will be the same as on channel 4.
+
+
+
+Data to be transmitted from decoder to receiver will be timed with the timer.
+
+Timing for data received at the decoder, is started with a level change interrupt from the start bit. As data does not have clock pulses to time the bits, the timer0 is started within the interrupt routine. Its timing is set in that way, that it times out later than the next possible level change interrupt would occur. That means, if the next bit starts with a level change, this will trigger the interrupt routine. But if the signal level of the next bit stays the same, the timer will time out and call the interrupt routine. This way, every edge on the receive line will resynchronize the receive timing.
+
+When a full dataword (8 or 16 databits) has been received, the timer will be disabled and receive restartet with the level change of the next start bit.
+
+If you know the binding string of your transmitter, you can put it into the code at the end of the program, where the EEPROM data is set up. You also can program your own fail safe defaults. In the moment, all channels are set to middle position, except channel 3 that is put to a low value (not the extreme low value, because ESCs may recognise this value as cut off position and you may not reach this value with normal stick position.)
+
+
+PORTA<0>   Output  LED for Bind/Online/Debug
+PORTA<1>   Input   pulled high with an external resistor. Pulled low with a plug (jumper) for binding and fail safe
+PORTA<2>   Input   pulled high with an external resistor. Pulled low with a plug to run channel 7 with normal direction
+
+PORTB<0>   Input   Dataline for communication with the receiver
+PORTB<1:7> Output  Channel 1 to channel 7
